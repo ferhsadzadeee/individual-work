@@ -1,0 +1,240 @@
+import json
+import time
+import os
+import re
+
+posts = []
+next_id = 1
+
+def welcome_screen():
+    os.system("cls" if os.name == "nt" else "clear")
+    print(r"""     ____  __               ____             __     __  ___                                 
+   / __ )/ /___  ____ _   / __ \____  ____/ /   /  |/  /___ _____  ____ _____ ____  _____
+  / __  / / __ \/ __ `/  / // / __ \/ ___/ __/  / /|/ / __ `/ __ \/ __ `/ __ `/ _ \/ ___/
+ / // / / // / // /  / ____/ // (__  ) /_   / /  / / // / / / / // / /_/ /  __/ /    
+///\/\, /  //    \//\/  //  //\,// //\,/\, /\/_/     
+              //                                                    //               """)
+    print("\nWelcome to *Blog Post Manager*!")
+    loading_animation()
+
+def loading_animation():
+    print("\nLoading", end="")
+    for _ in range(5):
+        time.sleep(0.4)
+        print(".", end="")
+    print("\n")
+
+def main_menu():
+    print("""
+    1. Create New Post
+    2. View All Posts
+    3. Search Post
+    4. Edit a Post
+    5. Delete a Post
+    6. View Summary Stats
+    7. Save Posts to File
+    8. Load Posts from File
+    9. Sort Posts by Title
+    10. Count Posts Recursively
+    11. Help / Instructions
+    12. Clear All Posts
+    0. Exit
+    """)
+
+def is_valid_date(date_string):
+    return re.match(r'^\d{4}-\d{2}-\d{2}$', date_string)
+
+def input_post():
+    global next_id
+    try:
+        title = input("Enter blog post title: ").strip()
+        if not title:
+            print("Title cannot be empty.")
+            return
+        author = input("Enter author's name: ").strip()
+        if not author:
+            print("Author cannot be empty.")
+            return
+        content = input("Enter blog post content: ").strip()
+        if not content:
+            print("Content cannot be empty.")
+            return
+        date_published = input("Enter date published (YYYY-MM-DD): ").strip()
+        if not date_published or not is_valid_date(date_published):
+            print("Date must be in format YYYY-MM-DD.")
+            return
+
+        post = {
+            "id": str(next_id),
+            "title": title,
+            "author": author,
+            "content": content,
+            "date_published": date_published
+        }
+        posts.append(post)
+        next_id += 1
+        print("Blog post added successfully!")
+    except Exception as e:
+        print("Error adding blog post:", str(e))
+
+def view_posts():
+    if not posts:
+        print("No blog posts found.")
+    else:
+        for p in posts:
+            print(f"\nID: {p['id']}")
+            print(f"Title: {p['title']}")
+            print(f"Author: {p['author']}")
+            print(f"Date Published: {p['date_published']}")
+            print(f"Content: {p['content'][:100]}...")
+            print("-" * 40)
+
+def search_post():
+    keyword = input("Enter post title or ID to search: ").strip()
+    found = False
+    for p in posts:
+        if p["id"] == keyword or p["title"].lower() == keyword.lower():
+            print("\n===== FOUND POST =====")
+            print(f"ID: {p['id']}")
+            print(f"Title: {p['title']}")
+            print(f"Author: {p['author']}")
+            print(f"Date Published: {p['date_published']}")
+            print(f"Content: {p['content']}\n")
+            print("======================")
+            found = True
+    if not found:
+        print("Post not found.")
+
+def update_post():
+    post_id = input("Enter post ID to update: ").strip()
+    for p in posts:
+        if p["id"] == post_id:
+            print(f"\nCurrent Title: {p['title']}")
+            print(f"Current Content: {p['content'][:100]}...")
+            new_title = input("New title (leave empty to keep current): ").strip()
+            new_content = input("New content (leave empty to keep current): ").strip()
+            new_author = input("New author (leave empty to keep current): ").strip()
+            new_date = input("New date (YYYY-MM-DD) (leave empty to keep current): ").strip()
+
+            if new_title:
+                p["title"] = new_title
+            if new_content:
+                p["content"] = new_content
+            if new_author:
+                p["author"] = new_author
+            if new_date:
+                if is_valid_date(new_date):
+                    p["date_published"] = new_date
+                else:
+                    print("Invalid date format. Keeping old date.")
+
+            print("Post updated successfully.")
+            return
+    print("Post not found.")
+
+def delete_post():
+    post_id = input("Enter post ID to delete: ").strip()
+    for i, p in enumerate(posts):
+        if p["id"] == post_id:
+            del posts[i]
+            print("Post deleted successfully.")
+            return
+    print("Post not found.")
+
+def summary_stats():
+    if not posts:
+        print("No posts to summarize.")
+        return
+    print(f"Total posts: {len(posts)}")
+    authors = [p["author"] for p in posts]
+    unique_authors = set(authors)
+    print(f"Unique authors: {len(unique_authors)}")
+    if authors:
+        most_common_author = max(set(authors), key=authors.count)
+        print(f"Most active author: {most_common_author}")
+
+def save_to_file():
+    try:
+        with open("posts.json", "w") as f:
+            json.dump({"posts": posts, "next_id": next_id}, f, indent=4)
+        print("Data saved to posts.json")
+    except Exception as e:
+        print("Error saving file:", str(e))
+
+def load_from_file():
+    global posts, next_id
+    try:
+        with open("posts.json", "r") as f:
+            data = json.load(f)
+            posts = data.get("posts", [])
+            next_id = data.get("next_id", 1)
+        print("Data loaded from posts.json")
+    except FileNotFoundError:
+        with open("posts.json", "w") as f:
+            json.dump({"posts": [], "next_id": 1}, f)
+        print("No file found. New empty file created.")
+    except json.JSONDecodeError:
+        print("File is corrupted.")
+
+def sort_posts():
+    if not posts:
+        print("No posts to sort.")
+        return
+    posts.sort(key=lambda x: x["title"].lower())
+    print("Posts sorted by title.")
+
+def recursive_count(index=0):
+    if index >= len(posts):
+        return 0
+    return 1 + recursive_count(index + 1)
+
+def help_menu():
+    print("""
+    Instructions:
+    - Use the menu numbers to choose an option.
+    - Make sure each blog post has a title, content, and date in format YYYY-MM-DD.
+    - Save your work before exiting to avoid data loss.
+    - Load posts anytime to retrieve your saved data.
+    - You can sort, search, update, delete, or clear all posts.
+    - Use recursive count to see total posts calculated recursively.
+    - Summary stats will show total posts, unique authors, and most active author.
+    """)
+
+def clear_data():
+    global next_id
+    confirm = input("Are you sure you want to delete all posts? (yes/no): ").strip().lower()
+    if confirm == "yes":
+        posts.clear()
+        next_id = 1
+        print("All posts cleared.")
+    else:
+        print("Operation cancelled.")
+
+def main():
+    welcome_screen()
+    while True:
+        main_menu()
+        try:
+            choice = input("Choose an option: ").strip()
+            match choice:
+                case "1": input_post()
+                case "2": view_posts()
+                case "3": search_post()
+                case "4": update_post()
+                case "5": delete_post()
+                case "6": summary_stats()
+                case "7": save_to_file()
+                case "8": load_from_file()
+                case "9": sort_posts()
+                case "10": print(f"Total posts (recursively): {recursive_count()}")
+                case "11": help_menu()
+                case "12": clear_data()
+                case "0":
+                    print("Goodbye!")
+                    break
+                case _: print("Invalid choice. Try again.")
+        except Exception as e:
+            print("An error occurred:", str(e))
+
+if _name_ == "_main_":
+    main()
